@@ -218,13 +218,7 @@ namespace StorybrewEditor.ScreenLayers
                         {
                             updateButton.Text = $"Version {latestVersion} available!";
                             updateButton.Tooltip = $"What's new:\n\n{description.TrimEnd('\n')}";
-                            updateButton.OnClick += (sender, e) =>
-                            {
-                                // Releases are Windows builds
-                                if (downloadUrl != null && latestVersion >= new Version(1, 4) && OperatingSystem.IsWindows())
-                                    Manager.Add(new UpdateMenu(downloadUrl));
-                                else Updater.OpenLastestReleasePage();
-                            };
+                            updateButton.OnClick += (sender, e) => openLatestReleasePage();
                             updateButton.StyleName = "";
                             updateButton.Disabled = false;
                         }
@@ -242,6 +236,9 @@ namespace StorybrewEditor.ScreenLayers
                 });
         }
 
+        private static void openLatestReleasePage()
+            => Process.Start(new ProcessStartInfo() { FileName = $"https://github.com/{Program.Repository}/releases/latest", UseShellExecute = true });
+
         private void handleLastestVersionException(Exception exception)
         {
             Trace.WriteLine($"Error while retrieving latest release information: {exception.Message}");
@@ -249,7 +246,7 @@ namespace StorybrewEditor.ScreenLayers
             versionLabel.Text = $"Could not retrieve latest release information:\n{exception.Message}\n\n{versionLabel.Text}";
 
             updateButton.Text = "See latest release";
-            updateButton.OnClick += (sender, e) => Updater.OpenLastestReleasePage();
+            updateButton.OnClick += (sender, e) => openLatestReleasePage();
             updateButton.Disabled = false;
             bottomLayout.Pack(600);
         }

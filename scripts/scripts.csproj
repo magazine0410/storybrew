@@ -15,7 +15,4 @@
     <ProjectReference Include="..\common\common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="OpenTK.dll.config" />
-  </ItemGroup>
 </Project>

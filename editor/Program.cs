@@ -47,12 +47,6 @@ namespace StorybrewEditor
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             //Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             OpenTkNativeLibraries.Register();
-#if WINDOWS
-            ClipboardHelper.Backend = new FormsClipboard();
-#endif
-
-            if (args.Length != 0 && handleArguments(args))
-                return;
 
             // Settings, logs, cache and scripts are relative to the working directory,
             // which outside of Windows usually isn't the application's folder.
@@ -61,23 +55,6 @@ namespace StorybrewEditor
 
             setupLogging();
             startEditor();
-        }
-
-        private static bool handleArguments(string[] args)
-        {
-            switch (args[0])
-            {
-                case "update":
-                    if (args.Length < 3) return false;
-                    setupLogging(Path.Combine(args[1], DefaultLogPath), "update.log");
-                    Updater.Update(args[1], new Version(args[2]));
-                    return true;
-                case "build":
-                    setupLogging(null, "build.log");
-                    Builder.Build();
-                    return true;
-            }
-            return false;
         }
 
         #region Editor
@@ -89,7 +66,6 @@ namespace StorybrewEditor
             enableScheduling();
 
             Settings = new Settings();
-            Updater.NotifyEditorRun();
 
             var displayDevice = findDisplayDevice();
 

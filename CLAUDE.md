@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-storybrew is an osu! storyboard editor: users write C# effect scripts, and the editor recompiles and re-renders them live whenever a script or asset file is saved. This checkout is a fork (`origin` = magazine0410, `upstream` = Damnae) that is being ported to run natively on Linux.
+storybrew is an osu! storyboard editor: users write C# effect scripts, and the editor recompiles and re-renders them live whenever a script or asset file is saved. This checkout is a fork (`origin` = magazine0410, `upstream` = Damnae) that is a Linux-native version of storybrew. Windows support isn't a goal: the upstream version already runs on Windows.
 
 ## Commands
 
@@ -16,8 +16,9 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
 ```
 
 - `TestBooleanCommandsInLoop` fails on the original upstream code too; it isn't a regression.
-- The editor's target framework depends on the OS doing the build: `net10.0-windows` (with WinForms) on Windows, and plain `net10.0` elsewhere. Windows-only code is wrapped in `#if WINDOWS`. To check that the Windows version still compiles on Linux, build a copy of the repo with the Linux `TargetFramework` line in `editor/editor.csproj` changed to `net10.0-windows` (`EnableWindowsTargeting` is already set). Don't override `TargetFramework` on the command line; restore breaks.
-- The `Build` configuration packages a Windows release zip (`Builder.cs`), and only on Windows.
+- Windows code left over from upstream isn't maintained or tested: the `net10.0-windows` target with WinForms in `editor/editor.csproj` and the `#if WINDOWS` / `OperatingSystem.IsWindows()` branches in shared files. They're kept to limit conflicts with upstream, but the Windows build no longer compiles (e.g. `FormsClipboard` was removed). Don't spend effort keeping Windows working.
+- Windows-only files were deleted: the self-updater (`Updater.cs`, `UpdateMenu.cs`), the release packager (`Builder.cs` and its `Build` post-build step), `editor/Util/Native.cs`, `FormsClipboard.cs`, `bass.dll`/`bass_fx.dll` and the `OpenTK.dll.config` files.
+- Common scripts come from the repository's `scripts/` folder (`Project.cs` looks four levels up from `editor/bin/<configuration>/<framework>/`). Projects are created in `editor/bin/Debug/net10.0/projects/`, and relative paths in effects resolve from the project's folder.
 
 ## Projects
 
@@ -34,11 +35,13 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
 - `ScriptContainer` loads each compiled assembly into a collectible `AssemblyLoadContext`, so a script can be unloaded and reloaded.
 - Effects run on background threads (`AsyncActionQueue`), write their sprites into editor layers, and are re-rendered by `EditorOsbSprite`.
 - Textures and samples are loaded lazily through `TextureContainerSeparate`/`AudioSampleContainer`. They are reloaded when the asset watcher sees a file change.
+- A project only shows what its effects generate: a new project is black even if the map has a storyboard. The `ImportOsb` script shows an existing `.osb`.
+- To run effects without the UI (e.g. a test program referencing `editor.csproj`), `Program`'s main thread id, `Settings` and `AudioManager` must be set and scheduled tasks pumped with `Program.RunScheduledTasks`. The effect queue is also only enabled by `Project.Draw`; enable `effectUpdateQueue` directly.
 - Settings, logs, `cache/` and `scripts/` are resolved relative to the working directory. On Linux, `Program.Main` sets the working directory to the application folder.
 
 ## Linux port status
 
-- **Done:** WinForms removed from the Linux build. File dialogs use kdialog or zenity (`editor/Util/LinuxDialogs.cs`), the clipboard uses wl-clipboard, xclip or xsel (`brewlib/Util/ClipboardHelper.cs`), native calls are guarded, and OpenTK library names are mapped (`OpenTkNativeLibraries`). Mapset files are found regardless of case and backslashes (`PathHelper.FindFileIgnoringCase`), and osu! is found in Wine installs (`OsuHelper`).
+- **Platform code:** file dialogs use kdialog or zenity (`editor/Util/LinuxDialogs.cs`), the clipboard uses wl-clipboard, xclip or xsel (`brewlib/Util/ClipboardHelper.cs`), native calls are guarded, and OpenTK library names are mapped (`OpenTkNativeLibraries`). Mapset files are found regardless of case and backslashes (`PathHelper.FindFileIgnoringCase`), and osu! is found in Wine installs (`OsuHelper`).
 - **Imaging is SkiaSharp**, replacing System.Drawing (GDI+), which throws on non-Windows. Don't add System.Drawing.Common back; only its cross-platform types (`Color`, `Rectangle`, … from System.Drawing.Primitives) are used.
   - Images decode through `BitmapLoader` as BGRA that isn't premultiplied (what GDI+ gave). `TextureOptions.WithPixels` converts to the premultiplication a texture wants before upload.
   - Text goes through `SkiaText` (brewlib): font sizes are points at 96 dpi like GDI+, and characters missing from a font are drawn with a system fallback font.
@@ -46,6 +49,10 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
   - Font caches record `Renderer: SkiaSharp`, so textures generated with GDI+ are regenerated.
 - **OpenTK 3 on X11:** setting `window.Location` or `Size` to its current value hangs forever, because it waits for a ConfigureNotify event that never comes. Only assign these when the value changes.
 - **Keep OpenTK 3:** don't upgrade to OpenTK 4. It moves the math types (`Vector2`, `Color4`, …) that every user script uses.
+
+## Merging upstream
+
+Merge (don't rebase) `upstream/master`, in `brewlib/` first, then in storybrew, resolving the brewlib pointer conflict by pointing at the merged brewlib commit. Upstream changes to the deleted Windows-only files show up as modify/delete conflicts: resolve them by keeping the files deleted (`git rm <file>`). Port new Windows-only code to the Linux equivalents (SkiaSharp, `LinuxDialogs`, `ClipboardHelper`); new WinForms or System.Drawing.Common usage fails to compile, other Windows-only APIs raise CA1416 warnings, and new `DllImport`s need checking by hand.
 
 ## Conventions
 

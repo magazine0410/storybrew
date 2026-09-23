@@ -61,7 +61,7 @@ namespace StorybrewCommon.Subtitles
                 }
 
                 using (var blurredBitmap = BitmapHelper.ConvoluteAlpha(blurSource, kernel, System.Drawing.Color.FromArgb(Color.ToArgb())))
-                    canvas.DrawBitmap(blurredBitmap.Bitmap, 0, 0);
+                    canvas.DrawBitmap(blurredBitmap.Bitmap, 0, 0, SKSamplingOptions.Default, null);
             }
         }
     }

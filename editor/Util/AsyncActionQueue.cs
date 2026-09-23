@@ -273,20 +273,9 @@ namespace StorybrewEditor.Util
                 lock (context.Queue)
                     Monitor.PulseAll(context.Queue);
 
+                // Threads can't be aborted, it is a background thread and won't keep the process alive
                 if (!localThread.Join(millisecondsTimeout))
-                {
-                    if (!OperatingSystem.IsWindows())
-                    {
-                        // Threads can't be aborted, it is a background thread and won't keep the process alive
-                        Trace.WriteLine($"Thread {localThread.Name} didn't stop, leaving it running.");
-                        return;
-                    }
-
-                    Trace.WriteLine($"Aborting thread {localThread.Name}.");
-                    IntPtr handle = Native.OpenThread(0x0001, false, (uint)localThread.ManagedThreadId);
-                    Native.TerminateThread(handle, 1);
-                    Native.CloseHandle(handle);
-                }
+                    Trace.WriteLine($"Thread {localThread.Name} didn't stop, leaving it running.");
             }
         }
     }

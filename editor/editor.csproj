@@ -68,8 +68,5 @@
     <EmbeddedResource Include="icon.ico" />
   </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Build' And '$(OS)' == 'Windows_NT'">
-    <Exec Command="cd &quot;$(OutDir)&quot; &amp;&amp; &quot;$(TargetName).exe&quot; build" />
-  </Target>
 
 </Project>
