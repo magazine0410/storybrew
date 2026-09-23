@@ -37,3 +37,5 @@ The original project's [wiki](https://github.com/Damnae/storybrew/wiki) explains
 ## License
 
 MIT, like the original storybrew by Damnae. See [LICENSE](LICENSE).
+
+The BASS audio libraries included in `brewlib/` (`libbass.so`, `libbass_fx.so`) aren't covered by it: they're by [un4seen](https://www.un4seen.com/) and free for non-commercial use only.
