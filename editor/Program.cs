@@ -18,7 +18,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace StorybrewEditor
 {
@@ -47,9 +46,18 @@ namespace StorybrewEditor
             mainThreadId = Thread.CurrentThread.ManagedThreadId;
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             //Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            OpenTkNativeLibraries.Register();
+#if WINDOWS
+            ClipboardHelper.Backend = new FormsClipboard();
+#endif
 
             if (args.Length != 0 && handleArguments(args))
                 return;
+
+            // Settings, logs, cache and scripts are relative to the working directory,
+            // which outside of Windows usually isn't the application's folder.
+            if (!OperatingSystem.IsWindows())
+                Environment.CurrentDirectory = AppContext.BaseDirectory;
 
             setupLogging();
             startEditor();
@@ -92,7 +100,9 @@ namespace StorybrewEditor
                 Trace.WriteLine($"{getOSVersion()} / {window.WindowInfo}");
                 Trace.WriteLine($"graphics mode: {window.Context.GraphicsMode}");
 
-                window.Icon = new Icon(typeof(Program), "icon.ico");
+                // Icon is a GDI+ type, only available on Windows
+                if (OperatingSystem.IsWindows())
+                    window.Icon = new Icon(typeof(Program), "icon.ico");
                 window.Resize += (sender, e) =>
                 {
                     editor.Draw(1);
@@ -108,6 +118,9 @@ namespace StorybrewEditor
 
         private static string getOSVersion()
         {
+            if (!OperatingSystem.IsWindows())
+                return RuntimeInformation.OSDescription;
+
             try
             {
                 using (var registryKey = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Windows NT\\CurrentVersion"))
@@ -151,7 +164,11 @@ namespace StorybrewEditor
 #else
             var contextFlags = GraphicsContextFlags.ForwardCompatible;
 #endif
-            var primaryScreenArea = Screen.PrimaryScreen.WorkingArea;
+#if WINDOWS
+            var primaryScreenArea = System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+#else
+            var primaryScreenArea = displayDevice.Bounds;
+#endif
 
             int windowWidth = 1366, windowHeight = 768;
             if (windowHeight >= primaryScreenArea.Height)
@@ -163,14 +180,20 @@ namespace StorybrewEditor
             var window = new GameWindow(windowWidth, windowHeight, graphicsMode, Name, GameWindowFlags.Default, displayDevice, 2, 0, contextFlags);
             Trace.WriteLine($"Window dpi scale: {window.Height / (float)windowHeight}");
 
-            window.Location = new Point(
+            // OpenTK's X11 backend waits for the window to move, which never happens if it's already there
+            var centeredLocation = new Point(
                 (int)(primaryScreenArea.Left + (primaryScreenArea.Width - window.Size.Width) * 0.5f),
                 (int)(primaryScreenArea.Top + (primaryScreenArea.Height - window.Size.Height) * 0.5f)
             );
+            if (window.Location != centeredLocation)
+                window.Location = centeredLocation;
+
             if (window.Location.X < 0 || window.Location.Y < 0)
             {
-                window.Location = primaryScreenArea.Location;
-                window.Size = primaryScreenArea.Size;
+                if (window.Location != primaryScreenArea.Location)
+                    window.Location = primaryScreenArea.Location;
+                if (window.Size != primaryScreenArea.Size)
+                    window.Size = primaryScreenArea.Size;
                 window.WindowState = WindowState.Maximized;
             }
 
@@ -394,7 +417,7 @@ namespace StorybrewEditor
             AppDomain.CurrentDomain.UnhandledException += (sender, e) => logError((Exception)e.ExceptionObject, crashPath, "crash", true);
 
             Trace.WriteLine($"CLR {Environment.Version} / {RuntimeEnvironment.GetRuntimeDirectory()}");
-            foreach (var p in Environment.GetEnvironmentVariable("path").Split(';').Where(p => p.Contains("\\dotnet\\")))
+            foreach (var p in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator).Where(p => p.Contains("dotnet")))
                 Trace.WriteLine($"  dotnet path {p}");
             Trace.WriteLine("");
         }
@@ -421,8 +444,8 @@ namespace StorybrewEditor
 
                     if (show)
                     {
-                        var result = MessageBox.Show($"An error occured:\n\n{e.Message} ({e.GetType().Name})\n\nClick Ok if you want to receive and invitation to a Discord server where you can get help with this problem.", FullName, MessageBoxButtons.OKCancel);
-                        if (result == DialogResult.OK) Process.Start(new ProcessStartInfo() { FileName = DiscordUrl, UseShellExecute = true });
+                        if (NativeMessageBox.Show($"An error occured:\n\n{e.Message} ({e.GetType().Name})\n\nClick Ok if you want to receive and invitation to a Discord server where you can get help with this problem.", FullName, true))
+                            Process.Start(new ProcessStartInfo() { FileName = DiscordUrl, UseShellExecute = true });
                     }
                 }
                 catch (Exception e2)

@@ -1,14 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Each OS builds its own flavor: WinForms (dialogs, clipboard) is only available on Windows -->
+    <TargetFramework Condition="'$(OS)' == 'Windows_NT'">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(OS)' != 'Windows_NT'">net10.0</TargetFramework>
+    <OutputType Condition="$(TargetFramework.EndsWith('-windows'))">WinExe</OutputType>
+    <OutputType Condition="!$(TargetFramework.EndsWith('-windows'))">Exe</OutputType>
+    <UseWindowsForms Condition="$(TargetFramework.EndsWith('-windows'))">true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>StorybrewEditor</RootNamespace>
     <AssemblyName>StorybrewEditor</AssemblyName>
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <UseWindowsForms>True</UseWindowsForms>
     <Configurations>Debug;Release;Build</Configurations>
     <Title>storybrew editor</Title>
     <Copyright>Copyright © Damnae 2024</Copyright>
@@ -64,7 +68,7 @@
     <EmbeddedResource Include="icon.ico" />
   </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Build'">
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Build' And '$(OS)' == 'Windows_NT'">
     <Exec Command="cd &quot;$(OutDir)&quot; &amp;&amp; &quot;$(TargetName).exe&quot; build" />
   </Target>
 

@@ -128,8 +128,8 @@ namespace StorybrewEditor.ScreenLayers
                 openProjectButton.Disabled = true;
 
                 Trace.WriteLine($".NET SDK {RuntimeEnvironment.GetSystemVersion()} not found at {sdkPath},\n from {RuntimeEnvironment.GetRuntimeDirectory()}");
-                Manager.ShowMessage($".NET SDK 8.0.8 x64 (or more recent) is required, do you want to install it?",
-                    () => Process.Start(new ProcessStartInfo() { FileName = "https://dotnet.microsoft.com/en-us/download/dotnet/8.0", UseShellExecute = true }), true);
+                Manager.ShowMessage($".NET SDK {Environment.Version.Major}.{Environment.Version.Minor} x64 is required, do you want to install it?",
+                    () => Process.Start(new ProcessStartInfo() { FileName = $"https://dotnet.microsoft.com/en-us/download/dotnet/{Environment.Version.Major}.{Environment.Version.Minor}", UseShellExecute = true }), true);
             }
 
             wikiButton.OnClick += (sender, e) => Process.Start(new ProcessStartInfo()
@@ -220,7 +220,8 @@ namespace StorybrewEditor.ScreenLayers
                             updateButton.Tooltip = $"What's new:\n\n{description.TrimEnd('\n')}";
                             updateButton.OnClick += (sender, e) =>
                             {
-                                if (downloadUrl != null && latestVersion >= new Version(1, 4))
+                                // Releases are Windows builds
+                                if (downloadUrl != null && latestVersion >= new Version(1, 4) && OperatingSystem.IsWindows())
                                     Manager.Add(new UpdateMenu(downloadUrl));
                                 else Updater.OpenLastestReleasePage();
                             };

@@ -89,7 +89,7 @@ namespace StorybrewCommon.Scripting
 
         private Bitmap getBitmap(string path, string alternatePath, bool watch)
         {
-            path = Path.GetFullPath(path);
+            path = Path.GetFullPath(PathHelper.FindFileIgnoringCase(path));
 
             if (!bitmaps.TryGetValue(path, out Bitmap bitmap))
             {
@@ -97,7 +97,7 @@ namespace StorybrewCommon.Scripting
 
                 if (alternatePath != null && !File.Exists(path))
                 {
-                    alternatePath = Path.GetFullPath(alternatePath);
+                    alternatePath = Path.GetFullPath(PathHelper.FindFileIgnoringCase(alternatePath));
                     if (watch) context.AddDependency(alternatePath);
 
                     try
@@ -130,7 +130,7 @@ namespace StorybrewCommon.Scripting
 
         private Stream openFile(string path, bool watch)
         {
-            path = Path.GetFullPath(path);
+            path = Path.GetFullPath(PathHelper.FindFileIgnoringCase(path));
             if (watch) context.AddDependency(path);
             return BrewLib.Util.Misc.WithRetries(() => new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read));
         }

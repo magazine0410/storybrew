@@ -339,8 +339,11 @@ namespace StorybrewEditor.UserInterface.Components
                 {
                     writer.Write(field.Name);
                     ObjectSerializer.Write(writer, field.Value);
-                    ClipboardHelper.SetData(effectConfigFormat, stream);
                 }
+                writer.Flush();
+
+                // Stored as text, custom clipboard formats aren't available on every platform
+                ClipboardHelper.SetText($"{effectConfigFormat}:{Convert.ToBase64String(stream.ToArray())}");
             }
         }
 
@@ -349,7 +352,11 @@ namespace StorybrewEditor.UserInterface.Components
             var changed = false;
             try
             {
-                using (var stream = (Stream)ClipboardHelper.GetData(effectConfigFormat))
+                var text = ClipboardHelper.GetText();
+                if (text == null || !text.StartsWith($"{effectConfigFormat}:"))
+                    return;
+
+                using (var stream = new MemoryStream(Convert.FromBase64String(text.Substring(effectConfigFormat.Length + 1))))
                 using (var reader = new BinaryReader(stream))
                 {
                     var fieldCount = reader.ReadInt32();

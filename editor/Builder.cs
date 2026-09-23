@@ -1,4 +1,5 @@
 ﻿using BrewLib.Util;
+using StorybrewEditor.Util;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -6,7 +7,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace StorybrewEditor
 {
@@ -26,7 +26,7 @@ namespace StorybrewEditor
             }
             catch (Exception e)
             {
-                MessageBox.Show($"\nBuild failed:\n\n{e}", Program.FullName);
+                NativeMessageBox.Show($"\nBuild failed:\n\n{e}", Program.FullName);
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace StorybrewEditor
             }
             catch (Exception e)
             {
-                MessageBox.Show($"\nUpdate test failed:\n\n{e}", Program.FullName);
+                NativeMessageBox.Show($"\nUpdate test failed:\n\n{e}", Program.FullName);
                 return;
             }
 

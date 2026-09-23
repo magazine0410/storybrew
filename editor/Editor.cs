@@ -24,7 +24,9 @@ namespace StorybrewEditor
     public class Editor : IDisposable
     {
         public GameWindow Window { get; }
+#if WINDOWS
         public readonly FormsWindow FormsWindow;
+#endif
 
         private readonly FrameClock clock = new FrameClock();
         public FrameTimeSource TimeSource => clock;
@@ -41,7 +43,9 @@ namespace StorybrewEditor
         public Editor(GameWindow window)
         {
             Window = window;
+#if WINDOWS
             FormsWindow = new FormsWindow(window.GetWindowHandle());
+#endif
         }
 
         public void Initialize(ScreenLayer initialLayer = null)
@@ -267,6 +271,7 @@ namespace StorybrewEditor
         }
     }
 
+#if WINDOWS
     public class FormsWindow : System.Windows.Forms.IWin32Window
     {
         public IntPtr Handle { get; }
@@ -276,4 +281,5 @@ namespace StorybrewEditor
             Handle = handle;
         }
     }
+#endif
 }

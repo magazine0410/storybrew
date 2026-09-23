@@ -2,6 +2,7 @@
 using BrewLib.Util;
 using StorybrewEditor.ScreenLayers.Util;
 using StorybrewEditor.Storyboarding;
+using StorybrewEditor.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,6 +16,7 @@ namespace StorybrewEditor.ScreenLayers
         {
             screenLayerManager.AsyncLoading("Select a folder", () =>
             {
+#if WINDOWS
                 using (var dialog = new System.Windows.Forms.FolderBrowserDialog()
                 {
                     Description = description,
@@ -26,6 +28,11 @@ namespace StorybrewEditor.ScreenLayers
                         var path = dialog.SelectedPath;
                         Program.Schedule(() => callback.Invoke(path));
                     }
+#else
+                var path = LinuxDialogs.PickFolder(description, initialValue);
+                if (path != null)
+                    Program.Schedule(() => callback.Invoke(path));
+#endif
             });
         }
 
@@ -33,6 +40,7 @@ namespace StorybrewEditor.ScreenLayers
         {
             screenLayerManager.AsyncLoading("Select a file", () =>
             {
+#if WINDOWS
                 using (var dialog = new System.Windows.Forms.OpenFileDialog()
                 {
                     Title = description,
@@ -47,6 +55,15 @@ namespace StorybrewEditor.ScreenLayers
                         var path = dialog.FileName;
                         Program.Schedule(() => callback.Invoke(path));
                     }
+#else
+                var initialPath = initialDirectory != null ? Path.GetFullPath(initialDirectory) : string.Empty;
+                if (!string.IsNullOrEmpty(initialValue))
+                    initialPath = Path.Combine(initialPath, initialValue);
+
+                var path = LinuxDialogs.PickFile(description, initialPath, filter);
+                if (path != null)
+                    Program.Schedule(() => callback.Invoke(path));
+#endif
             });
         }
 
@@ -54,6 +71,7 @@ namespace StorybrewEditor.ScreenLayers
         {
             screenLayerManager.AsyncLoading("Select a location", () =>
             {
+#if WINDOWS
                 using (var dialog = new System.Windows.Forms.SaveFileDialog()
                 {
                     Title = description,
@@ -69,6 +87,11 @@ namespace StorybrewEditor.ScreenLayers
                         var path = dialog.FileName;
                         Program.Schedule(() => callback.Invoke(path));
                     }
+#else
+                var path = LinuxDialogs.PickSaveLocation(description, initialValue, extension, filter);
+                if (path != null)
+                    Program.Schedule(() => callback.Invoke(path));
+#endif
             });
         }
 

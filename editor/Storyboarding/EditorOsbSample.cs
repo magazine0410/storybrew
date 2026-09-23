@@ -1,4 +1,5 @@
 ﻿using BrewLib.Audio;
+using BrewLib.Util;
 using StorybrewCommon.Storyboarding;
 using System.IO;
 
@@ -14,7 +15,7 @@ namespace StorybrewEditor.Storyboarding
                 return;
 
             AudioSample sample;
-            var fullPath = Path.Combine(project.MapsetPath, AudioPath);
+            var fullPath = PathHelper.FindFileIgnoringCase(Path.Combine(project.MapsetPath, AudioPath));
             try
             {
                 if (File.Exists(fullPath))

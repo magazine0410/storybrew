@@ -1,9 +1,9 @@
 ﻿using BrewLib.Util;
+using StorybrewEditor.Util;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace StorybrewEditor
 {
@@ -33,7 +33,7 @@ namespace StorybrewEditor
             catch (Exception e)
             {
                 Trace.WriteLine($"Failed to replace files: {e}");
-                MessageBox.Show($"Update failed, please update manually.\n\n{e}", Program.FullName);
+                NativeMessageBox.Show($"Update failed, please update manually.\n\n{e}", Program.FullName);
                 OpenLastestReleasePage();
                 Program.Report("updatefail", e);
                 return;
@@ -46,7 +46,7 @@ namespace StorybrewEditor
             catch (Exception e)
             {
                 Trace.WriteLine($"Failed to update data: {e}");
-                MessageBox.Show($"Failed to update data.\n\n{e}", Program.FullName);
+                NativeMessageBox.Show($"Failed to update data.\n\n{e}", Program.FullName);
                 Program.Report("updatefail", e);
             }
 

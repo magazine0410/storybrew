@@ -363,7 +363,7 @@ namespace StorybrewEditor.UserInterface.Components
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "VSCodium Insiders", "bin", "codium-insiders"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "VSCodium Insiders", "bin", "codium-insiders")
             };
-            foreach (var path in Environment.GetEnvironmentVariable("path").Split(';'))
+            foreach (var path in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
                 if (PathHelper.IsValidPath(path))
                 {
                     paths.Add(Path.Combine(path, "code"));

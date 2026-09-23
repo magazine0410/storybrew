@@ -58,7 +58,7 @@ namespace StorybrewEditor.Storyboarding
                     if (beatmap.AudioFilename == null)
                         continue;
 
-                    var path = Path.Combine(MapsetPath, beatmap.AudioFilename);
+                    var path = PathHelper.FindFileIgnoringCase(Path.Combine(MapsetPath, beatmap.AudioFilename));
                     if (!File.Exists(path))
                         continue;
 
@@ -462,13 +462,19 @@ namespace StorybrewEditor.Storyboarding
         public static string GetRuntimeRefDirectory()
         {
             // C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.5 => C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\8.0.5\ref\net8.0
-            return Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..",
-                "packs",
-                "Microsoft.NETCore.App.Ref",
-                RuntimeEnvironment.GetSystemVersion().TrimStart('v'), // eg. 8.0.5
-                "ref",
-                "net" + RuntimeEnvironment.GetSystemVersion().Substring(1, 3) // eg. net8.0
-            );
+            var runtimeVersion = Environment.Version;
+            var refPacksPath = Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", "packs", "Microsoft.NETCore.App.Ref"));
+
+            // The SDK's reference pack can be from another patch than the runtime, use the closest one
+            var packVersion = runtimeVersion.ToString(3); // eg. 8.0.5
+            if (!Directory.Exists(Path.Combine(refPacksPath, packVersion)) && Directory.Exists(refPacksPath))
+                packVersion = Directory.GetDirectories(refPacksPath)
+                    .Select(path => System.Version.TryParse(Path.GetFileName(path), out var version) ? version : null)
+                    .Where(version => version != null && version.Major == runtimeVersion.Major && version.Minor == runtimeVersion.Minor)
+                    .OrderByDescending(version => version)
+                    .FirstOrDefault()?.ToString(3) ?? packVersion;
+
+            return Path.Combine(refPacksPath, packVersion, "ref", $"net{runtimeVersion.Major}.{runtimeVersion.Minor}");
         }
 
         private static readonly string[] netRuntimeAssemblies =
