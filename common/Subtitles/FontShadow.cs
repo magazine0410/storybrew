@@ -1,6 +1,7 @@
-﻿using OpenTK;
+﻿using BrewLib.Util;
+using OpenTK;
 using OpenTK.Graphics;
-using System.Drawing;
+using SkiaSharp;
 
 namespace StorybrewCommon.Subtitles
 {
@@ -12,14 +13,14 @@ namespace StorybrewCommon.Subtitles
         public bool Overlay => false;
         public Vector2 Measure() => new Vector2(Thickness * 2);
 
-        public void Draw(Bitmap bitmap, Graphics textGraphics, Font font, StringFormat stringFormat, string text, float x, float y)
+        public void Draw(SKBitmap bitmap, SKCanvas canvas, FontText text, float x, float y)
         {
             if (Thickness < 1)
                 return;
 
-            using (var brush = new SolidBrush(System.Drawing.Color.FromArgb(Color.ToArgb())))
+            using (var paint = new SKPaint() { Color = Color.ToSKColor(), IsAntialias = true })
                 for (var i = 1; i <= Thickness; i++)
-                    textGraphics.DrawString(text, font, brush, x + i, y + i, stringFormat);
+                    text.Draw(canvas, paint, x + i, y + i);
         }
     }
 }

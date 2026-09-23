@@ -100,9 +100,10 @@ namespace StorybrewEditor
                 Trace.WriteLine($"{getOSVersion()} / {window.WindowInfo}");
                 Trace.WriteLine($"graphics mode: {window.Context.GraphicsMode}");
 
+#if WINDOWS
                 // Icon is a GDI+ type, only available on Windows
-                if (OperatingSystem.IsWindows())
-                    window.Icon = new Icon(typeof(Program), "icon.ico");
+                window.Icon = new Icon(typeof(Program), "icon.ico");
+#endif
                 window.Resize += (sender, e) =>
                 {
                     editor.Draw(1);

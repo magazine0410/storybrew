@@ -1,12 +1,12 @@
-﻿using System.Drawing;
+﻿using SkiaSharp;
+using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Drawing.Imaging;
 
 namespace StorybrewCommon.Util
 {
     public static class BitmapHelper
     {
-        public static PinnedBitmap Blur(Bitmap source, int radius, double power)
+        public static PinnedBitmap Blur(SKBitmap source, int radius, double power)
             => Convolute(source, CalculateGaussianKernel(radius, power));
 
         public static double[,] CalculateGaussianKernel(int radius, double weight)
@@ -31,7 +31,7 @@ namespace StorybrewCommon.Util
             return kernel;
         }
 
-        public static PinnedBitmap Convolute(Bitmap source, double[,] kernel)
+        public static PinnedBitmap Convolute(SKBitmap source, double[,] kernel)
         {
             var kernelHeight = kernel.GetUpperBound(0) + 1;
             var kernelWidth = kernel.GetUpperBound(1) + 1;
@@ -102,7 +102,7 @@ namespace StorybrewCommon.Util
             }
         }
 
-        public static PinnedBitmap ConvoluteAlpha(Bitmap source, double[,] kernel, Color color)
+        public static PinnedBitmap ConvoluteAlpha(SKBitmap source, double[,] kernel, Color color)
         {
             var kernelHeight = kernel.GetUpperBound(0) + 1;
             var kernelWidth = kernel.GetUpperBound(1) + 1;
@@ -159,22 +159,23 @@ namespace StorybrewCommon.Util
             }
         }
 
-        public static Rectangle? FindTransparencyBounds(Bitmap source)
+        public static Rectangle? FindTransparencyBounds(SKBitmap source)
         {
-            var data = source.LockBits(new Rectangle(0, 0, source.Width, source.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-            var buffer = new byte[data.Height * data.Stride];
-            Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
-            source.UnlockBits(data);
+            using (var pinnedSource = PinnedBitmap.FromBitmap(source))
+                return findTransparencyBounds(pinnedSource.Data, source.Width, source.Height);
+        }
 
+        private static Rectangle? findTransparencyBounds(int[] pixels, int width, int height)
+        {
             int xMin = int.MaxValue, xMax = int.MinValue, yMin = int.MaxValue, yMax = int.MinValue;
             var foundPixel = false;
 
-            for (var x = 0; x < data.Width; x++)
+            for (var x = 0; x < width; x++)
             {
                 var stop = false;
-                for (var y = 0; y < data.Height; y++)
+                for (var y = 0; y < height; y++)
                 {
-                    var alpha = buffer[y * data.Stride + 4 * x + 3];
+                    var alpha = (pixels[y * width + x] >> 24) & 0xFF;
                     if (alpha != 0)
                     {
                         xMin = x;
@@ -189,12 +190,12 @@ namespace StorybrewCommon.Util
             if (!foundPixel)
                 return null;
 
-            for (var y = 0; y < data.Height; y++)
+            for (var y = 0; y < height; y++)
             {
                 var stop = false;
-                for (var x = xMin; x < data.Width; x++)
+                for (var x = xMin; x < width; x++)
                 {
-                    var alpha = buffer[y * data.Stride + 4 * x + 3];
+                    var alpha = (pixels[y * width + x] >> 24) & 0xFF;
                     if (alpha != 0)
                     {
                         yMin = y;
@@ -205,12 +206,12 @@ namespace StorybrewCommon.Util
                 if (stop) break;
             }
 
-            for (var x = data.Width - 1; x >= xMin; x--)
+            for (var x = width - 1; x >= xMin; x--)
             {
                 var stop = false;
-                for (var y = yMin; y < data.Height; y++)
+                for (var y = yMin; y < height; y++)
                 {
-                    var alpha = buffer[y * data.Stride + 4 * x + 3];
+                    var alpha = (pixels[y * width + x] >> 24) & 0xFF;
                     if (alpha != 0)
                     {
                         xMax = x;
@@ -221,12 +222,12 @@ namespace StorybrewCommon.Util
                 if (stop) break;
             }
 
-            for (var y = data.Height - 1; y >= yMin; y--)
+            for (var y = height - 1; y >= yMin; y--)
             {
                 var stop = false;
                 for (var x = xMin; x <= xMax; x++)
                 {
-                    var alpha = buffer[y * data.Stride + 4 * x + 3];
+                    var alpha = (pixels[y * width + x] >> 24) & 0xFF;
                     if (alpha != 0)
                     {
                         yMax = y;
@@ -237,28 +238,41 @@ namespace StorybrewCommon.Util
                 if (stop) break;
             }
 
-            return Rectangle.Intersect(Rectangle.FromLTRB(xMin - 1, yMin - 1, xMax + 2, yMax + 2), new Rectangle(0, 0, source.Width, source.Height));
+            return Rectangle.Intersect(Rectangle.FromLTRB(xMin - 1, yMin - 1, xMax + 2, yMax + 2), new Rectangle(0, 0, width, height));
         }
 
+        /// <summary>
+        /// A bitmap whose pixels can be accessed as ARGB integers that aren't premultiplied.
+        /// </summary>
         public class PinnedBitmap : IDisposable
         {
             private GCHandle handle;
 
-            public readonly Bitmap Bitmap;
+            public readonly SKBitmap Bitmap;
             public readonly int[] Data;
 
             public PinnedBitmap(int width, int height)
             {
                 Data = new int[width * height];
                 handle = GCHandle.Alloc(Data, GCHandleType.Pinned);
-                Bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppArgb, handle.AddrOfPinnedObject());
+
+                Bitmap = new SKBitmap();
+                if (!Bitmap.InstallPixels(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul), handle.AddrOfPinnedObject(), width * 4))
+                {
+                    handle.Free();
+                    throw new InvalidOperationException($"Failed to create a {width}x{height} bitmap");
+                }
             }
 
-            public static PinnedBitmap FromBitmap(Bitmap bitmap)
+            public static PinnedBitmap FromBitmap(SKBitmap bitmap)
             {
                 var result = new PinnedBitmap(bitmap.Width, bitmap.Height);
-                using (var graphics = Graphics.FromImage(result.Bitmap))
-                    graphics.DrawImage(bitmap, 0, 0);
+                using (var pixmap = bitmap.PeekPixels())
+                    if (!pixmap.ReadPixels(result.Bitmap.Info, result.handle.AddrOfPinnedObject(), bitmap.Width * 4, 0, 0))
+                    {
+                        result.Dispose();
+                        throw new InvalidOperationException($"Failed to read a {bitmap.ColorType} {bitmap.AlphaType} bitmap");
+                    }
                 return result;
             }
 

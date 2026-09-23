@@ -1,9 +1,8 @@
-﻿using OpenTK;
+﻿using BrewLib.Util;
+using OpenTK;
 using OpenTK.Graphics;
+using SkiaSharp;
 using StorybrewCommon.Util;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 
 namespace StorybrewCommon.Subtitles
 {
@@ -40,20 +39,18 @@ namespace StorybrewCommon.Subtitles
         public bool Overlay => false;
         public Vector2 Measure() => new Vector2(Radius * 2);
 
-        public void Draw(Bitmap bitmap, Graphics textGraphics, Font font, StringFormat stringFormat, string text, float x, float y)
+        public void Draw(SKBitmap bitmap, SKCanvas canvas, FontText text, float x, float y)
         {
             if (Radius < 1)
                 return;
 
-            using (var blurSource = new Bitmap(bitmap.Width, bitmap.Height, PixelFormat.Format32bppArgb))
+            using (var blurSource = new SKBitmap(new SKImageInfo(bitmap.Width, bitmap.Height, SKColorType.Bgra8888, SKAlphaType.Premul)))
             {
-                using (var brush = new SolidBrush(System.Drawing.Color.White))
-                using (var graphics = Graphics.FromImage(blurSource))
+                using (var blurCanvas = new SKCanvas(blurSource))
+                using (var paint = new SKPaint() { Color = SKColors.White, IsAntialias = true })
                 {
-                    graphics.TextRenderingHint = textGraphics.TextRenderingHint;
-                    graphics.SmoothingMode = SmoothingMode.HighQuality;
-                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    graphics.DrawString(text, font, brush, x, y, stringFormat);
+                    blurCanvas.Clear(SKColors.Transparent);
+                    text.Draw(blurCanvas, paint, x, y);
                 }
 
                 if (kernel == null)
@@ -64,7 +61,7 @@ namespace StorybrewCommon.Subtitles
                 }
 
                 using (var blurredBitmap = BitmapHelper.ConvoluteAlpha(blurSource, kernel, System.Drawing.Color.FromArgb(Color.ToArgb())))
-                    textGraphics.DrawImage(blurredBitmap.Bitmap, 0, 0);
+                    canvas.DrawBitmap(blurredBitmap.Bitmap, 0, 0);
             }
         }
     }

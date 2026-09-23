@@ -30,7 +30,7 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
 ## How scripts run
 
 - `ScriptManager` watches `.cs` files with `FileSystemWatcher`.
-- `ScriptCompiler` compiles them in memory with Roslyn. It references `Project.DefaultAssemblies`: the .NET reference assemblies (from `Project.GetRuntimeRefDirectory()`, which needs the .NET SDK installed), `System.Drawing.Common`, `OpenTK`, and `StorybrewCommon`.
+- `ScriptCompiler` compiles them in memory with Roslyn. It references `Project.DefaultAssemblies`: the .NET reference assemblies (from `Project.GetRuntimeRefDirectory()`, which needs the .NET SDK installed), `SkiaSharp`, `OpenTK`, and `StorybrewCommon`.
 - `ScriptContainer` loads each compiled assembly into a collectible `AssemblyLoadContext`, so a script can be unloaded and reloaded.
 - Effects run on background threads (`AsyncActionQueue`), write their sprites into editor layers, and are re-rendered by `EditorOsbSprite`.
 - Textures and samples are loaded lazily through `TextureContainerSeparate`/`AudioSampleContainer`. They are reloaded when the asset watcher sees a file change.
@@ -39,7 +39,11 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
 ## Linux port status
 
 - **Done:** WinForms removed from the Linux build. File dialogs use kdialog or zenity (`editor/Util/LinuxDialogs.cs`), the clipboard uses wl-clipboard, xclip or xsel (`brewlib/Util/ClipboardHelper.cs`), native calls are guarded, and OpenTK library names are mapped (`OpenTkNativeLibraries`). Mapset files are found regardless of case and backslashes (`PathHelper.FindFileIgnoringCase`), and osu! is found in Wine installs (`OsuHelper`).
-- **Remaining:** replace System.Drawing (GDI+), which throws on non-Windows. It is used for texture loading (`Texture2d`), UI text (`TextGenerator`), and subtitle/font generation plus `BitmapHelper` in common. The editor currently crashes at startup in `TextGenerator`. The ~560 CA1416 build warnings mark the call sites. `FontEffect`, `FontDescription.FontStyle` and `GetMapsetBitmap` expose System.Drawing types to user scripts.
+- **Imaging is SkiaSharp**, replacing System.Drawing (GDI+), which throws on non-Windows. Don't add System.Drawing.Common back; only its cross-platform types (`Color`, `Rectangle`, … from System.Drawing.Primitives) are used.
+  - Images decode through `BitmapLoader` as BGRA that isn't premultiplied (what GDI+ gave). `TextureOptions.WithPixels` converts to the premultiplication a texture wants before upload.
+  - Text goes through `SkiaText` (brewlib): font sizes are points at 96 dpi like GDI+, and characters missing from a font are drawn with a system fallback font.
+  - Script compatibility: `GetMapsetBitmap` returns `StorybrewCommon.Scripting.Bitmap` (`Width`, `Height`, `Size`, `GetPixel`), and `StorybrewCommon.Subtitles.FontStyle`/`WrapMode` keep the System.Drawing values, so scripts using `var`, `Bitmap` or those enums still compile. Custom `FontEffect` implementations must be rewritten for the SkiaSharp signature (`FontText.Draw` draws the text).
+  - Font caches record `Renderer: SkiaSharp`, so textures generated with GDI+ are regenerated.
 - **OpenTK 3 on X11:** setting `window.Location` or `Size` to its current value hangs forever, because it waits for a ConfigureNotify event that never comes. Only assign these when the value changes.
 - **Keep OpenTK 3:** don't upgrade to OpenTK 4. It moves the math types (`Vector2`, `Color4`, …) that every user script uses.
 

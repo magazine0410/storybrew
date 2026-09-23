@@ -1,13 +1,12 @@
-﻿using BrewLib.Util;
+﻿using BrewLib.Graphics.Text;
+using BrewLib.Util;
 using OpenTK;
 using OpenTK.Graphics;
+using SkiaSharp;
 using StorybrewCommon.Storyboarding;
 using StorybrewCommon.Util;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
 using Tiny;
 
 namespace StorybrewCommon.Subtitles
@@ -74,6 +73,11 @@ namespace StorybrewCommon.Subtitles
 
         private readonly Dictionary<string, FontTexture> textureCache = new Dictionary<string, FontTexture>();
 
+        /// <summary>
+        /// Textures cached by another renderer (System.Drawing before this) are generated again.
+        /// </summary>
+        private const string renderer = "SkiaSharp";
+
         internal FontGenerator(string directory, FontDescription description, FontEffect[] effects, string projectDirectory, string assetDirectory)
         {
             Directory = directory;
@@ -102,103 +106,115 @@ namespace StorybrewCommon.Subtitles
 
             float offsetX = 0, offsetY = 0;
             int baseWidth, baseHeight, width, height;
-            using (var graphics = Graphics.FromHwnd(IntPtr.Zero))
-            using (var stringFormat = new StringFormat(StringFormat.GenericTypographic))
-            using (var textBrush = new SolidBrush(Color.FromArgb(description.Color.ToArgb())))
-            using (var fontCollection = new PrivateFontCollection())
+            using (var typeface = loadTypeface(fontPath, description.FontStyle))
+            using (var font = SkiaText.CreateFont(typeface, description.FontSize))
             {
-                graphics.TextRenderingHint = TextRenderingHint.AntiAlias;
-                stringFormat.Alignment = StringAlignment.Center;
-                stringFormat.FormatFlags = StringFormatFlags.FitBlackBox | StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoClip;
+                // Like GDI+, simulate the styles the font doesn't have
+                if (description.FontStyle.HasFlag(FontStyle.Bold) && typeface.FontStyle.Weight < (int)SKFontStyleWeight.SemiBold)
+                    font.Embolden = true;
+                if (description.FontStyle.HasFlag(FontStyle.Italic) && typeface.FontStyle.Slant == SKFontStyleSlant.Upright)
+                    font.SkewX = -0.25f;
 
-                FontFamily fontFamily = null;
-                if (File.Exists(fontPath))
+                var fontText = new FontText(text, font, description.FontStyle);
+                baseWidth = (int)Math.Ceiling(fontText.Width);
+                baseHeight = (int)Math.Ceiling(fontText.Height);
+
+                var effectsWidth = 0f;
+                var effectsHeight = 0f;
+                foreach (var effect in effects)
                 {
-                    fontCollection.AddFontFile(fontPath);
-                    fontFamily = fontCollection.Families[0];
+                    var effectSize = effect.Measure();
+                    effectsWidth = Math.Max(effectsWidth, effectSize.X);
+                    effectsHeight = Math.Max(effectsHeight, effectSize.Y);
                 }
+                width = (int)Math.Ceiling(baseWidth + effectsWidth + description.Padding.X * 2);
+                height = (int)Math.Ceiling(baseHeight + effectsHeight + description.Padding.Y * 2);
 
-                var dpiScale = 96f / graphics.DpiY;
-                var fontStyle = description.FontStyle;
-                using (var font = fontFamily != null ? new Font(fontFamily, description.FontSize * dpiScale, fontStyle) : new Font(fontPath, description.FontSize * dpiScale, fontStyle))
+                var paddingX = description.Padding.X + effectsWidth * 0.5f;
+                var paddingY = description.Padding.Y + effectsHeight * 0.5f;
+                var textX = paddingX + fontText.Width * 0.5f;
+                var textY = paddingY;
+
+                offsetX = -paddingX;
+                offsetY = -paddingY;
+
+                if (text.Length == 1 && char.IsWhiteSpace(text[0]) || width == 0 || height == 0)
+                    return new FontTexture(null, offsetX, offsetY, baseWidth, baseHeight, width, height);
+
+                using (var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)))
                 {
-                    var measuredSize = graphics.MeasureString(text, font, 0, stringFormat);
-                    baseWidth = (int)Math.Ceiling(measuredSize.Width);
-                    baseHeight = (int)Math.Ceiling(measuredSize.Height);
-
-                    var effectsWidth = 0f;
-                    var effectsHeight = 0f;
-                    foreach (var effect in effects)
+                    using (var canvas = new SKCanvas(bitmap))
+                    using (var textPaint = new SKPaint() { Color = description.Color.ToSKColor(), IsAntialias = true })
                     {
-                        var effectSize = effect.Measure();
-                        effectsWidth = Math.Max(effectsWidth, effectSize.X);
-                        effectsHeight = Math.Max(effectsHeight, effectSize.Y);
+                        if (description.Debug)
+                        {
+                            var r = new Random(textureCache.Count);
+                            canvas.Clear(new SKColor((byte)r.Next(100, 255), (byte)r.Next(100, 255), (byte)r.Next(100, 255)));
+                        }
+                        else canvas.Clear(SKColors.Transparent);
+
+                        foreach (var effect in effects)
+                            if (!effect.Overlay)
+                                effect.Draw(bitmap, canvas, fontText, textX, textY);
+                        if (!description.EffectsOnly)
+                            fontText.Draw(canvas, textPaint, textX, textY);
+                        foreach (var effect in effects)
+                            if (effect.Overlay)
+                                effect.Draw(bitmap, canvas, fontText, textX, textY);
+
+                        if (description.Debug)
+                            using (var pen = new SKPaint() { Color = new SKColor(255, 0, 0), Style = SKPaintStyle.Stroke, StrokeWidth = 1 })
+                            {
+                                canvas.DrawLine(textX, textY, textX, textY + baseHeight, pen);
+                                canvas.DrawLine(textX - baseWidth * 0.5f, textY, textX + baseWidth * 0.5f, textY, pen);
+                            }
                     }
-                    width = (int)Math.Ceiling(baseWidth + effectsWidth + description.Padding.X * 2);
-                    height = (int)Math.Ceiling(baseHeight + effectsHeight + description.Padding.Y * 2);
 
-                    var paddingX = description.Padding.X + effectsWidth * 0.5f;
-                    var paddingY = description.Padding.Y + effectsHeight * 0.5f;
-                    var textX = paddingX + measuredSize.Width * 0.5f;
-                    var textY = paddingY;
-
-                    offsetX = -paddingX;
-                    offsetY = -paddingY;
-
-                    if (text.Length == 1 && char.IsWhiteSpace(text[0]) || width == 0 || height == 0)
-                        return new FontTexture(null, offsetX, offsetY, baseWidth, baseHeight, width, height);
-
-                    using (var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb))
+                    var bounds = description.TrimTransparency ? BitmapHelper.FindTransparencyBounds(bitmap) : null;
+                    if (bounds != null && bounds != new Rectangle(0, 0, bitmap.Width, bitmap.Height))
                     {
-                        using (var textGraphics = Graphics.FromImage(bitmap))
+                        var trimBounds = bounds.Value;
+                        using (var trimmedBitmap = new SKBitmap())
                         {
-                            textGraphics.TextRenderingHint = graphics.TextRenderingHint;
-                            textGraphics.SmoothingMode = SmoothingMode.HighQuality;
-                            textGraphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                            if (!bitmap.ExtractSubset(trimmedBitmap, SKRectI.Create(trimBounds.Left, trimBounds.Top, trimBounds.Width, trimBounds.Height)))
+                                throw new InvalidOperationException($"Failed to trim {bitmapPath} to {trimBounds}");
 
-                            if (description.Debug)
-                            {
-                                var r = new Random(textureCache.Count);
-                                textGraphics.Clear(Color.FromArgb(r.Next(100, 255), r.Next(100, 255), r.Next(100, 255)));
-                            }
-
-                            foreach (var effect in effects)
-                                if (!effect.Overlay)
-                                    effect.Draw(bitmap, textGraphics, font, stringFormat, text, textX, textY);
-                            if (!description.EffectsOnly)
-                                textGraphics.DrawString(text, font, textBrush, textX, textY, stringFormat);
-                            foreach (var effect in effects)
-                                if (effect.Overlay)
-                                    effect.Draw(bitmap, textGraphics, font, stringFormat, text, textX, textY);
-
-                            if (description.Debug)
-                                using (var pen = new Pen(Color.FromArgb(255, 0, 0)))
-                                {
-                                    textGraphics.DrawLine(pen, textX, textY, textX, textY + baseHeight);
-                                    textGraphics.DrawLine(pen, textX - baseWidth * 0.5f, textY, textX + baseWidth * 0.5f, textY);
-                                }
+                            offsetX += trimBounds.Left;
+                            offsetY += trimBounds.Top;
+                            width = trimmedBitmap.Width;
+                            height = trimmedBitmap.Height;
+                            BrewLib.Util.Misc.WithRetries(() => savePng(trimmedBitmap, bitmapPath));
                         }
-
-                        var bounds = description.TrimTransparency ? BitmapHelper.FindTransparencyBounds(bitmap) : null;
-                        if (bounds != null && bounds != new Rectangle(0, 0, bitmap.Width, bitmap.Height))
-                        {
-                            var trimBounds = bounds.Value;
-                            using (var trimmedBitmap = new Bitmap(trimBounds.Width, trimBounds.Height))
-                            {
-                                offsetX += trimBounds.Left;
-                                offsetY += trimBounds.Top;
-                                width = trimmedBitmap.Width;
-                                height = trimmedBitmap.Height;
-                                using (var trimGraphics = Graphics.FromImage(trimmedBitmap))
-                                    trimGraphics.DrawImage(bitmap, 0, 0, trimBounds, GraphicsUnit.Pixel);
-                                BrewLib.Util.Misc.WithRetries(() => trimmedBitmap.Save(bitmapPath, ImageFormat.Png));
-                            }
-                        }
-                        else BrewLib.Util.Misc.WithRetries(() => bitmap.Save(bitmapPath, ImageFormat.Png));
                     }
+                    else BrewLib.Util.Misc.WithRetries(() => savePng(bitmap, bitmapPath));
                 }
             }
             return new FontTexture(Path.Combine(Directory, filename), offsetX, offsetY, baseWidth, baseHeight, width, height);
+        }
+
+        private static SKTypeface loadTypeface(string fontPath, FontStyle fontStyle)
+        {
+            if (File.Exists(fontPath))
+            {
+                var typeface = SKTypeface.FromFile(fontPath);
+                if (typeface != null)
+                    return typeface;
+                Trace.WriteLine($"Failed to load font {fontPath}, using it as a font name");
+            }
+
+            // Not a font file, look for an installed font with that name
+            var style = new SKFontStyle(
+                fontStyle.HasFlag(FontStyle.Bold) ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                SKFontStyleWidth.Normal,
+                fontStyle.HasFlag(FontStyle.Italic) ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            return SKTypeface.FromFamilyName(fontPath, style);
+        }
+
+        private static void savePng(SKBitmap bitmap, string path)
+        {
+            using (var data = bitmap.Encode(SKEncodedImageFormat.Png, 100))
+            using (var stream = File.Create(path))
+                data.SaveTo(stream);
         }
 
         internal void HandleCache(TinyToken cachedFontRoot)
@@ -238,7 +254,8 @@ namespace StorybrewCommon.Subtitles
 
         private bool matches(TinyToken cachedFontRoot)
         {
-            if (cachedFontRoot.Value<string>("FontPath") == description.FontPath &&
+            if (cachedFontRoot.Value<string>("Renderer") == renderer &&
+                cachedFontRoot.Value<string>("FontPath") == description.FontPath &&
                 cachedFontRoot.Value<int>("FontSize") == description.FontSize &&
                 MathUtil.FloatEquals(cachedFontRoot.Value<float>("ColorR"), description.Color.R, 0.00001f) &&
                 MathUtil.FloatEquals(cachedFontRoot.Value<float>("ColorG"), description.Color.G, 0.00001f) &&
@@ -324,6 +341,7 @@ namespace StorybrewCommon.Subtitles
 
         internal TinyObject ToTinyObject() => new TinyObject
         {
+            { "Renderer", renderer },
             { "FontPath", PathHelper.WithStandardSeparators(description.FontPath) },
             { "FontSize", description.FontSize },
             { "ColorR", description.Color.R },

@@ -10,8 +10,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="System.Drawing.Common">
-            <HintPath>..\..\System.Drawing.Common.dll</HintPath>
+        <Reference Include="SkiaSharp">
+            <HintPath>..\..\SkiaSharp.dll</HintPath>
         </Reference>
         <Reference Include="OpenTK">
             <HintPath>..\..\OpenTK.dll</HintPath>

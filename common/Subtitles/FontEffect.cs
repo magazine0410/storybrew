@@ -1,5 +1,5 @@
 ﻿using OpenTK;
-using System.Drawing;
+using SkiaSharp;
 
 namespace StorybrewCommon.Subtitles
 {
@@ -8,6 +8,10 @@ namespace StorybrewCommon.Subtitles
         bool Overlay { get; }
 
         Vector2 Measure();
-        void Draw(Bitmap bitmap, Graphics textGraphics, Font font, StringFormat stringFormat, string text, float x, float y);
+
+        /// <summary>
+        /// Draws the effect on the bitmap, for text horizontally centered on x with its top at y.
+        /// </summary>
+        void Draw(SKBitmap bitmap, SKCanvas canvas, FontText text, float x, float y);
     }
 }

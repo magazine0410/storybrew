@@ -6,7 +6,6 @@ using StorybrewCommon.Subtitles;
 using StorybrewCommon.Subtitles.Parsers;
 using StorybrewCommon.Util;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -102,17 +101,20 @@ namespace StorybrewCommon.Scripting
 
                     try
                     {
-                        bitmaps.Add(path, bitmap = BrewLib.Util.Misc.WithRetries(() => (Bitmap)Image.FromFile(alternatePath)));
+                        bitmaps.Add(path, bitmap = BrewLib.Util.Misc.WithRetries(() => loadBitmap(alternatePath)));
                     }
                     catch (FileNotFoundException e)
                     {
                         throw new FileNotFoundException(path, e);
                     }
                 }
-                else bitmaps.Add(path, bitmap = BrewLib.Util.Misc.WithRetries(() => (Bitmap)Image.FromFile(path)));
+                else bitmaps.Add(path, bitmap = BrewLib.Util.Misc.WithRetries(() => loadBitmap(path)));
             }
             return bitmap;
         }
+
+        private static Bitmap loadBitmap(string path)
+            => new Bitmap(BitmapLoader.Load(path) ?? throw new InvalidDataException($"{path} isn't a supported image"));
 
         /// <summary>
         /// Opens a project file in read-only mode. 

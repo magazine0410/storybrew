@@ -1,8 +1,7 @@
 ﻿using BrewLib.Util;
 using OpenTK;
 using OpenTK.Graphics;
-using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 
 namespace StorybrewCommon.Subtitles
 {
@@ -16,16 +15,26 @@ namespace StorybrewCommon.Subtitles
         public bool Overlay => true;
         public Vector2 Measure() => Vector2.Zero;
 
-        public void Draw(Bitmap bitmap, Graphics textGraphics, Font font, StringFormat stringFormat, string text, float x, float y)
+        public void Draw(SKBitmap bitmap, SKCanvas canvas, FontText text, float x, float y)
         {
             var transparentColor = Color.WithOpacity(0);
-            using (var brush = new LinearGradientBrush(
-                new PointF(x + Offset.X, y + Offset.Y),
-                new PointF(x + Offset.X + Size.X, y + Offset.Y + Size.Y),
-                System.Drawing.Color.FromArgb(Color.ToArgb()),
-                System.Drawing.Color.FromArgb(transparentColor.ToArgb()))
-                { WrapMode = WrapMode, })
-                textGraphics.DrawString(text, font, brush, x, y, stringFormat);
+            using (var shader = SKShader.CreateLinearGradient(
+                new SKPoint(x + Offset.X, y + Offset.Y),
+                new SKPoint(x + Offset.X + Size.X, y + Offset.Y + Size.Y),
+                new[] { Color.ToSKColor(), transparentColor.ToSKColor() },
+                getTileMode(WrapMode)))
+            using (var paint = new SKPaint() { Shader = shader, IsAntialias = true })
+                text.Draw(canvas, paint, x, y);
+        }
+
+        private static SKShaderTileMode getTileMode(WrapMode wrapMode)
+        {
+            switch (wrapMode)
+            {
+                case WrapMode.Tile: return SKShaderTileMode.Repeat;
+                case WrapMode.Clamp: return SKShaderTileMode.Clamp;
+                default: return SKShaderTileMode.Mirror;
+            }
         }
     }
 }

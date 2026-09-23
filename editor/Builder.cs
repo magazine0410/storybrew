@@ -58,6 +58,11 @@ namespace StorybrewEditor
                 foreach (var path in Directory.EnumerateFiles(appDirectory, "*.dll", SearchOption.TopDirectoryOnly))
                     addFile(archive, path, appDirectory);
 
+                // Native libraries from packages (SkiaSharp), the release has no deps.json to find them in runtimes/
+                var nativeDirectory = Path.Combine(appDirectory, "runtimes", "win-x64", "native");
+                foreach (var path in Directory.EnumerateFiles(nativeDirectory, "*.dll", SearchOption.TopDirectoryOnly))
+                    addFile(archive, path, nativeDirectory);
+
                 // Scripts
                 foreach (var path in Directory.EnumerateFiles(scriptsDirectory, "*.cs", SearchOption.TopDirectoryOnly))
                     addFile(archive, path, scriptsDirectory, "scripts");

@@ -110,7 +110,8 @@ namespace StorybrewEditor.Storyboarding
             ScriptsPath = Path.GetDirectoryName(projectPath);
             if (withCommonScripts)
             {
-                CommonScriptsPath = Path.GetFullPath(Path.Combine("..", "..", "..", "scripts"));
+                // The repository's scripts when running from editor/bin/<configuration>/<framework>
+                CommonScriptsPath = Path.GetFullPath(Path.Combine("..", "..", "..", "..", "scripts"));
                 if (!Directory.Exists(CommonScriptsPath))
                 {
                     CommonScriptsPath = Path.GetFullPath("scripts");
@@ -483,7 +484,7 @@ namespace StorybrewEditor.Storyboarding
 
         private static readonly List<string> defaultAssemblies = new List<string>()
         {
-            typeof(System.Drawing.Bitmap).Assembly.Location, // System.Drawing.Common.dll
+            typeof(SkiaSharp.SKBitmap).Assembly.Location, // SkiaSharp.dll
             typeof(OpenTK.Toolkit).Assembly.Location, // OpenTK.dll
             typeof(StorybrewCommon.Scripting.Script).Assembly.Location // StorybrewCommon.dll
         }.Concat(netRuntimeAssemblies).ToList();
