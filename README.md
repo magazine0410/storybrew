@@ -2,12 +2,12 @@
 
 A Linux-native version of [storybrew](https://github.com/Damnae/storybrew), the osu! storyboard editor that shows changes to effect scripts and sprite textures as soon as you save them.
 
-This fork only runs on Linux. The original storybrew runs on Windows and is maintained separately by Damnae. The two versions aren't interchangeable, so don't ask for help with this one in the original project's channels.
+This fork only runs on Linux. The original storybrew runs on Windows and is maintained separately by Damnae. The two versions aren't interchangeable, so don't ask for help with this one in the original project's channels if you encounter bugs; they have different code in many areas in order for it to work on Linux, and thus people involved with that version are not obligated to help with issues that arise with this one.
 
 ## Requirements
 
 - x86_64 Linux with OpenGL, on X11 or on Wayland through XWayland
-- kdialog or zenity, for file dialogs
+- kdialog (KDE) or zenity (other DEs, falling back to kdialog if it's not installed), for file dialogs
 - wl-clipboard (Wayland), xclip or xsel (X11), for copying and pasting outside of the editor
 
 ## Download
@@ -18,6 +18,8 @@ Download the AppImage from [Releases](https://github.com/magazine0410/storybrew/
 chmod +x storybrew-*-x86_64.AppImage
 ./storybrew-*-x86_64.AppImage
 ```
+
+Alternatively, on your file manager (such as Dolphin), right-click the AppImage, click "Properties" and then "Permissions", and toggle "Allow executing file as program". After that, you can double-click it (or right-click and "Run as executable") to start storybrew.
 
 It includes .NET and everything needed to compile effect scripts. Running AppImages needs FUSE, which most distributions include. Settings, logs and projects are kept in `~/.local/share/storybrew/`.
 
@@ -50,6 +52,6 @@ The original project's [wiki](https://github.com/Damnae/storybrew/wiki) explains
 
 ## License
 
-MIT, like the original storybrew by Damnae. See [LICENSE](LICENSE).
+MIT, like the original app by Damnae. See [LICENSE](LICENSE).
 
 The BASS audio libraries included in `brewlib/` (`libbass.so`, `libbass_fx.so`) aren't covered by it: they're by [un4seen](https://www.un4seen.com/) and free for non-commercial use only.
