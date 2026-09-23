@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=storybrew
+Comment=osu! storyboard editor
+Exec=StorybrewEditor
+Icon=storybrew
+Categories=Graphics;
+Terminal=false

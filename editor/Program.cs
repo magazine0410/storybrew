@@ -50,10 +50,46 @@ namespace StorybrewEditor
             // Settings, logs, cache and scripts are relative to the working directory,
             // which outside of Windows usually isn't the application's folder.
             if (!OperatingSystem.IsWindows())
-                Environment.CurrentDirectory = AppContext.BaseDirectory;
+                Environment.CurrentDirectory = getDataDirectory();
 
             setupLogging();
             startEditor();
+        }
+
+        /// <summary>
+        /// The application's folder, or the user's data folder when running as an AppImage, whose folder is read-only.
+        /// </summary>
+        private static string getDataDirectory()
+        {
+            if (Environment.GetEnvironmentVariable("APPIMAGE") == null)
+                return AppContext.BaseDirectory;
+
+            var dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "storybrew");
+            Directory.CreateDirectory(dataDirectory);
+
+            // Common scripts are read from the data folder, and script projects reference these assemblies for code editors
+            var scriptsDirectory = Path.Combine(dataDirectory, "scripts");
+            Directory.CreateDirectory(scriptsDirectory);
+            foreach (var scriptPath in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "scripts"), "*.cs"))
+                copyIfChanged(scriptPath, Path.Combine(scriptsDirectory, Path.GetFileName(scriptPath)), true);
+            foreach (var assemblyName in new[] { "StorybrewCommon.dll", "OpenTK.dll", "SkiaSharp.dll" })
+                copyIfChanged(Path.Combine(AppContext.BaseDirectory, assemblyName), Path.Combine(dataDirectory, assemblyName), false);
+
+            return dataDirectory;
+        }
+
+        private static void copyIfChanged(string sourcePath, string destinationPath, bool readOnly)
+        {
+            if (File.Exists(destinationPath))
+            {
+                if (File.ReadAllBytes(destinationPath).AsSpan().SequenceEqual(File.ReadAllBytes(sourcePath)))
+                    return;
+                File.SetAttributes(destinationPath, FileAttributes.Normal);
+            }
+
+            File.Copy(sourcePath, destinationPath, true);
+            if (readOnly)
+                File.SetAttributes(destinationPath, FileAttributes.ReadOnly);
         }
 
         #region Editor
@@ -407,7 +443,7 @@ namespace StorybrewEditor
 
                 try
                 {
-                    var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filename);
+                    var logPath = Path.GetFullPath(filename);
                     using (StreamWriter w = new StreamWriter(logPath, true))
                     {
                         w.Write(DateTime.Now + " - ");

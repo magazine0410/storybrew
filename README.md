@@ -7,11 +7,23 @@ This fork only runs on Linux. The original storybrew runs on Windows and is main
 ## Requirements
 
 - x86_64 Linux with OpenGL, on X11 or on Wayland through XWayland
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0); the SDK is needed to compile effect scripts, not only to build the editor
 - kdialog or zenity, for file dialogs
 - wl-clipboard (Wayland), xclip or xsel (X11), for copying and pasting outside of the editor
 
+## Download
+
+Download the AppImage from [Releases](https://github.com/magazine0410/storybrew/releases/latest), make it executable and run it:
+
+```bash
+chmod +x storybrew-*-x86_64.AppImage
+./storybrew-*-x86_64.AppImage
+```
+
+It includes .NET and everything needed to compile effect scripts. Running AppImages needs FUSE, which most distributions include. Settings, logs and projects are kept in `~/.local/share/storybrew/`.
+
 ## Building and running
+
+Building needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), which is also used to compile effect scripts when running from a build.
 
 ```bash
 git clone --recurse-submodules https://github.com/magazine0410/storybrew.git
@@ -20,7 +32,9 @@ dotnet build editor/editor.csproj
 ./editor/bin/Debug/net10.0/StorybrewEditor
 ```
 
-Projects are created in `editor/bin/Debug/net10.0/projects/`. storybrew looks for osu! in common Wine locations (such as osu-winello's `~/.local/share/osu-wine/osu!`) when choosing a mapset.
+When running from a build, projects are created in `editor/bin/Debug/net10.0/projects/`. storybrew looks for osu! in common Wine locations (such as osu-winello's `~/.local/share/osu-wine/osu!`) when choosing a mapset.
+
+To build the AppImage, get [appimagetool](https://github.com/AppImage/appimagetool/releases) and run `APPIMAGETOOL=/path/to/appimagetool packaging/appimage/build.sh`. The AppImage is written to `packaging/appimage/out/`.
 
 ## Using it
 

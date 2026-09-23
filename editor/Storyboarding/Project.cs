@@ -463,6 +463,11 @@ namespace StorybrewEditor.Storyboarding
         public static string GetRuntimeRefDirectory()
         {
             // C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.5 => C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\8.0.5\ref\net8.0
+            // Bundled with self-contained builds (AppImage), see PreserveCompilationReferences
+            var bundledRefsPath = Path.Combine(AppContext.BaseDirectory, "refs");
+            if (Directory.Exists(bundledRefsPath))
+                return bundledRefsPath;
+
             var runtimeVersion = Environment.Version;
             var refPacksPath = Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", "packs", "Microsoft.NETCore.App.Ref"));
 
@@ -480,7 +485,9 @@ namespace StorybrewEditor.Storyboarding
 
         private static readonly string[] netRuntimeAssemblies =
             Directory.GetFiles(GetRuntimeRefDirectory(), "*.dll")
-            .Where(x => !Path.GetFileName(x).EndsWith(".Native.dll")).ToArray();
+            .Where(x => !Path.GetFileName(x).EndsWith(".Native.dll"))
+            // Bundled references also contain SkiaSharp, which is referenced below
+            .Where(x => Path.GetFileName(x) != "SkiaSharp.dll").ToArray();
 
         private static readonly List<string> defaultAssemblies = new List<string>()
         {

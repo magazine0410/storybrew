@@ -37,7 +37,7 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
 - Textures and samples are loaded lazily through `TextureContainerSeparate`/`AudioSampleContainer`. They are reloaded when the asset watcher sees a file change.
 - A project only shows what its effects generate: a new project is black even if the map has a storyboard. The `ImportOsb` script shows an existing `.osb`.
 - To run effects without the UI (e.g. a test program referencing `editor.csproj`), `Program`'s main thread id, `Settings` and `AudioManager` must be set and scheduled tasks pumped with `Program.RunScheduledTasks`. The effect queue is also only enabled by `Project.Draw`; enable `effectUpdateQueue` directly.
-- Settings, logs, `cache/` and `scripts/` are resolved relative to the working directory. On Linux, `Program.Main` sets the working directory to the application folder.
+- Settings, logs, `cache/` and `scripts/` are resolved relative to the working directory. `Program.Main` sets it to the application folder, or in an AppImage (`APPIMAGE` is set) to `~/.local/share/storybrew`, copying the bundled common scripts and the assemblies script projects reference there.
 
 ## Linux port status
 
@@ -49,6 +49,10 @@ dotnet test test/test.csproj --filter "FullyQualifiedName~CommandTest.TestBoolea
   - Font caches record `Renderer: SkiaSharp`, so textures generated with GDI+ are regenerated.
 - **OpenTK 3 on X11:** setting `window.Location` or `Size` to its current value hangs forever, because it waits for a ConfigureNotify event that never comes. Only assign these when the value changes.
 - **Keep OpenTK 3:** don't upgrade to OpenTK 4. It moves the math types (`Vector2`, `Color4`, …) that every user script uses.
+
+## Releases
+
+`packaging/appimage/build.sh` publishes a self-contained linux-x64 build into an AppImage. `PreserveCompilationReferences` bundles the reference assemblies in `refs/`, which `Project.GetRuntimeRefDirectory` prefers, so scripts compile without an SDK. The version comes from `AssemblyVersion` in `editor/editor.csproj`: fork releases continue from upstream's (1.97.1, 1.97.2, …), and the GitHub release name must be that version, since the update check parses it and compares it with the editor's.
 
 ## Merging upstream
 
