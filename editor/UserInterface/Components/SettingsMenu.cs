@@ -93,7 +93,7 @@ namespace StorybrewEditor.UserInterface.Components
 
             helpButton.OnClick += (sender, e) => Process.Start(new ProcessStartInfo() 
             { 
-                FileName = $"https://github.com/{Program.Repository}/wiki",
+                FileName = $"https://github.com/{Program.Repository}#readme",
                 UseShellExecute = true
             });
             referencedAssemblyButton.OnClick += (sender, e) => Manager.ScreenLayerManager.Add(new ReferencedAssemblyConfig(project));

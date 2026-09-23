@@ -24,10 +24,9 @@ namespace StorybrewEditor
     class Program
     {
         public const string Name = "storybrew editor";
-        public const string Repository = "Damnae/storybrew";
+        public const string Repository = "magazine0410/storybrew";
         public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
         public static string FullName => $"{Name} {Version} ({Repository})";
-        public static string DiscordUrl = $"https://discord.gg/0qfFOucX93QDNVN7";
 
         public static AudioManager AudioManager { get; private set; }
         public static Settings Settings { get; private set; }
@@ -421,8 +420,7 @@ namespace StorybrewEditor
 
                     if (show)
                     {
-                        if (NativeMessageBox.Show($"An error occured:\n\n{e.Message} ({e.GetType().Name})\n\nClick Ok if you want to receive and invitation to a Discord server where you can get help with this problem.", FullName, true))
-                            Process.Start(new ProcessStartInfo() { FileName = DiscordUrl, UseShellExecute = true });
+                        NativeMessageBox.Show($"An error occured:\n\n{e.Message} ({e.GetType().Name})\n\nDetails were saved to {logPath}", FullName);
                     }
                 }
                 catch (Exception e2)

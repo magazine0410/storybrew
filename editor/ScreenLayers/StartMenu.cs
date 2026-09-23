@@ -22,7 +22,6 @@ namespace StorybrewEditor.ScreenLayers
         private Button closeButton;
 
         private LinearLayout bottomRightLayout;
-        private Button discordButton;
         private Button wikiButton;
 
         private LinearLayout bottomLayout;
@@ -77,16 +76,10 @@ namespace StorybrewEditor.ScreenLayers
                 Fill = true,
                 Children = new Widget[]
                 {
-                    discordButton = new Button(WidgetManager)
-                    {
-                        StyleName = "small",
-                        Text = "Join Discord",
-                        AnchorFrom = BoxAlignment.Centre,
-                    },
                     wikiButton = new Button(WidgetManager)
                     {
                         StyleName = "small",
-                        Text = "Wiki",
+                        Text = "Help",
                         AnchorFrom = BoxAlignment.Centre,
                     },
                 },
@@ -134,10 +127,9 @@ namespace StorybrewEditor.ScreenLayers
 
             wikiButton.OnClick += (sender, e) => Process.Start(new ProcessStartInfo()
             {
-                FileName = $"https://github.com/{Program.Repository}/wiki",
+                FileName = $"https://github.com/{Program.Repository}#readme",
                 UseShellExecute = true
             });
-            discordButton.OnClick += (sender, e) => Process.Start(new ProcessStartInfo() { FileName = Program.DiscordUrl, UseShellExecute = true });
             closeButton.OnClick += (sender, e) => Exit();
             checkLatestVersion();
         }
