@@ -7,7 +7,7 @@ This fork only runs on Linux. The original storybrew runs on Windows and is main
 ## Requirements
 
 - x86_64 Linux with OpenGL, on X11 or on Wayland through XWayland
-- kdialog (KDE) or zenity (other DEs, falling back to kdialog if it's not installed), for file dialogs
+- kdialog or zenity, for file dialogs (kdialog is preferred on KDE and zenity on other desktops, but either one works)
 - wl-clipboard (Wayland), xclip or xsel (X11), for copying and pasting outside of the editor
 
 ## Download
@@ -19,7 +19,7 @@ chmod +x storybrew-*-x86_64.AppImage
 ./storybrew-*-x86_64.AppImage
 ```
 
-Alternatively, on your file manager (such as Dolphin), right-click the AppImage, click "Properties" and then "Permissions", and toggle "Allow executing file as program". After that, you can double-click it (or right-click and "Run as executable") to start storybrew.
+Alternatively, on your file manager (such as Dolphin), right-click the AppImage, click "Properties" and then "Permissions", and toggle "Allow executing file as program". After that, you can double-click it (or right-click and "Run Executable") to start storybrew.
 
 It includes .NET and everything needed to compile effect scripts. Running AppImages needs FUSE, which most distributions include. Settings, logs and projects are kept in `~/.local/share/storybrew/`.
 
